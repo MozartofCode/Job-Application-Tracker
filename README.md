@@ -16,6 +16,7 @@
 
 - **🎯 One-Click Capture**: Beautiful "Capture Job" button appears on job postings
 - **📊 Auto-Save to Google Sheets**: Jobs automatically sync to your spreadsheet
+- **💾 Smart Tracking**: Once saved, jobs stay marked as "Saved" - no duplicate entries!
 - **🔄 Offline Queue**: Jobs saved locally and synced when online
 - **💼 LinkedIn Support**: Optimized scraping for LinkedIn job pages
 - **🌐 Universal Scraper**: Works on most company career sites
@@ -111,7 +112,7 @@
 1. Create a new [Google Sheet](https://sheets.google.com)
 2. Add headers in row 1:
    ```
-   Job Title | Company | Location | Salary | URL | Date Applied | Status | Notes
+   Company name | Position | Location | Link | Salary
    ```
 3. Copy the **Spreadsheet ID** from the URL:
    ```
@@ -235,14 +236,13 @@ JobFlow appends rows in this format:
 
 | Column | Field | Example |
 |--------|-------|---------|
-| A | Job Title | "Senior Full-Stack Engineer" |
-| B | Company | "Google" |
+| A | Company name | "Google" |
+| B | Position | "Senior Full-Stack Engineer" |
 | C | Location | "Mountain View, CA" |
-| D | Salary | "$150k - $200k" |
-| E | URL | "https://linkedin.com/jobs/view/12345" |
-| F | Date Applied | "2026-02-01" |
-| G | Status | "Saved" |
-| H | Notes | "" |
+| D | Link | "https://linkedin.com/jobs/view/12345" |
+| E | Salary | "$150k - $200k" |
+
+**Note**: Empty fields will show "-" instead of being blank.
 
 You can customize columns by editing the `appendToGoogleSheets()` function in `background.js`.
 

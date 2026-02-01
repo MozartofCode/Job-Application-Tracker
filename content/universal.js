@@ -120,20 +120,52 @@ function extractJobData() {
 // UI Injection - Floating "Capture Job" Button
 // =======================
 
-function createFloatingButton() {
+// Track saved jobs in storage
+async function isJobSaved(url) {
+    const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
+    return savedJobs.includes(url);
+}
+
+async function markJobAsSaved(url) {
+    const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
+    if (!savedJobs.includes(url)) {
+        savedJobs.push(url);
+        await chrome.storage.local.set({ savedJobs });
+    }
+}
+
+async function createFloatingButton() {
     const button = document.createElement('button');
     button.id = 'jobflow-floating-btn';
     button.className = 'jobflow-floating-button';
-    button.innerHTML = `
-    <div class="jobflow-fab-icon">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <span class="jobflow-fab-text">Capture Job</span>
-  `;
 
-    button.addEventListener('click', handleCaptureClick);
+    // Check if this job was already saved
+    const currentUrl = window.location.href;
+    const alreadySaved = await isJobSaved(currentUrl);
+
+    if (alreadySaved) {
+        button.innerHTML = `
+        <div class="jobflow-fab-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="jobflow-fab-text">Saved!</span>
+      `;
+        button.classList.add('jobflow-success');
+        button.disabled = true;
+    } else {
+        button.innerHTML = `
+        <div class="jobflow-fab-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="jobflow-fab-text">Capture Job</span>
+      `;
+        button.addEventListener('click', handleCaptureClick);
+    }
+
     return button;
 }
 
@@ -166,7 +198,10 @@ async function handleCaptureClick(event) {
         });
 
         if (response.success) {
-            // Show success state
+            // Mark job as saved in storage
+            await markJobAsSaved(window.location.href);
+
+            // Show success state PERMANENTLY
             button.classList.remove('jobflow-loading');
             button.classList.add('jobflow-success');
             icon.innerHTML = `
@@ -175,18 +210,7 @@ async function handleCaptureClick(event) {
         </svg>
       `;
             text.textContent = 'Saved!';
-
-            // Reset after 3 seconds
-            setTimeout(() => {
-                button.classList.remove('jobflow-success');
-                icon.innerHTML = `
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>
-        `;
-                text.textContent = 'Capture Job';
-                button.disabled = false;
-            }, 3000);
+            // Keep button disabled - no reset!
         } else {
             throw new Error(response.error || 'Failed to save');
         }
@@ -220,7 +244,7 @@ async function handleCaptureClick(event) {
 // Button Injection Logic
 // =======================
 
-function injectFloatingButton() {
+async function injectFloatingButton() {
     // Check if button already exists
     if (document.getElementById('jobflow-floating-btn')) {
         return;
@@ -232,7 +256,7 @@ function injectFloatingButton() {
         return;
     }
 
-    const button = createFloatingButton();
+    const button = await createFloatingButton();
     document.body.appendChild(button);
     console.log('✅ Floating capture button injected');
 }

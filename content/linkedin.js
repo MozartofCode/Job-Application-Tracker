@@ -76,18 +76,48 @@ function extractJobData() {
 // UI Injection - "Capture Job" Button
 // =======================
 
-function createCaptureButton() {
+// Track saved jobs in storage
+async function isJobSaved(url) {
+    const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
+    return savedJobs.includes(url);
+}
+
+async function markJobAsSaved(url) {
+    const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
+    if (!savedJobs.includes(url)) {
+        savedJobs.push(url);
+        await chrome.storage.local.set({ savedJobs });
+    }
+}
+
+async function createCaptureButton() {
     const button = document.createElement('button');
     button.id = 'jobflow-capture-btn';
     button.className = 'jobflow-capture-button';
-    button.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>
-    <span>Capture Job</span>
-  `;
 
-    button.addEventListener('click', handleCaptureClick);
+    // Check if this job was already saved
+    const currentUrl = window.location.href;
+    const alreadySaved = await isJobSaved(currentUrl);
+
+    if (alreadySaved) {
+        button.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Saved!</span>
+      `;
+        button.classList.add('jobflow-success');
+        button.disabled = true;
+    } else {
+        button.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Capture Job</span>
+      `;
+        button.addEventListener('click', handleCaptureClick);
+    }
+
     return button;
 }
 
@@ -96,7 +126,6 @@ async function handleCaptureClick(event) {
     event.stopPropagation();
 
     const button = event.currentTarget;
-    const originalHTML = button.innerHTML;
 
     try {
         // Show loading state
@@ -118,7 +147,10 @@ async function handleCaptureClick(event) {
         });
 
         if (response.success) {
-            // Show success state
+            // Mark job as saved in storage
+            await markJobAsSaved(window.location.href);
+
+            // Show success state PERMANENTLY
             button.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -126,13 +158,7 @@ async function handleCaptureClick(event) {
         <span>Saved!</span>
       `;
             button.classList.add('jobflow-success');
-
-            // Reset after 2 seconds
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.disabled = false;
-                button.classList.remove('jobflow-success');
-            }, 2000);
+            // Keep button disabled - no reset!
         } else {
             throw new Error(response.error || 'Failed to save');
         }
@@ -148,8 +174,14 @@ async function handleCaptureClick(event) {
     `;
         button.classList.add('jobflow-error');
 
+        // Only reset on error after 2 seconds
         setTimeout(() => {
-            button.innerHTML = originalHTML;
+            button.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Capture Job</span>
+      `;
             button.disabled = false;
             button.classList.remove('jobflow-error');
         }, 2000);
@@ -160,7 +192,7 @@ async function handleCaptureClick(event) {
 // Button Injection Logic
 // =======================
 
-function injectCaptureButton() {
+async function injectCaptureButton() {
     // Check if button already exists
     if (document.getElementById('jobflow-capture-btn')) {
         return;
@@ -172,7 +204,7 @@ function injectCaptureButton() {
     );
 
     if (titleContainer) {
-        const button = createCaptureButton();
+        const button = await createCaptureButton();
 
         // Insert button next to the title
         const wrapper = titleContainer.parentElement;

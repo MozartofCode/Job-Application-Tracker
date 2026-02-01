@@ -53,16 +53,13 @@ async function appendToGoogleSheets(jobData) {
 
     const url = `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/Sheet1!A1:append?valueInputOption=USER_ENTERED`;
 
-    // Format data as a row
+    // Format data as a row: Company, Position, Location, Link, Salary
     const row = [
-      jobData.title || '',
-      jobData.company || '',
-      jobData.location || '',
-      jobData.salary || '',
-      jobData.url || '',
-      jobData.date || new Date().toISOString().split('T')[0],
-      jobData.status || 'Saved',
-      jobData.notes || ''
+      jobData.company || '-',
+      jobData.title || '-',
+      jobData.location || '-',
+      jobData.url || '-',
+      jobData.salary || '-'
     ];
 
     const response = await fetch(url, {

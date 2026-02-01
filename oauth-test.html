@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>JobFlow OAuth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            cursor: pointer;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #357ae8;
+        }
+
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>JobFlow OAuth Diagnostic</h1>
+
+    <div>
+        <h3>Extension Info:</h3>
+        <div id="extensionInfo" class="result"></div>
+    </div>
+
+    <button id="testAuth">Test OAuth (Non-Interactive)</button>
+    <button id="testAuthInteractive">Test OAuth (Interactive - Will Show Login)</button>
+    <button id="clearAuth">Clear Auth Token</button>
+
+    <div>
+        <h3>Result:</h3>
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        // Display extension info
+        const manifest = chrome.runtime.getManifest();
+        document.getElementById('extensionInfo').innerHTML = `
+Extension ID: ${chrome.runtime.id}
+Client ID: ${manifest.oauth2?.client_id || 'NOT FOUND'}
+Scopes: ${manifest.oauth2?.scopes?.join(', ') || 'NOT FOUND'}
+        `;
+
+        // Test non-interactive auth
+        document.getElementById('testAuth').addEventListener('click', () => {
+            document.getElementById('result').className = 'result';
+            document.getElementById('result').textContent = 'Testing...';
+
+            chrome.identity.getAuthToken({ interactive: false }, (token) => {
+                const resultDiv = document.getElementById('result');
+                if (chrome.runtime.lastError) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ ERROR:\n${chrome.runtime.lastError.message}\n\nFull Error:\n${JSON.stringify(chrome.runtime.lastError, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ SUCCESS!\n\nToken: ${token.substring(0, 50)}...`;
+                }
+            });
+        });
+
+        // Test interactive auth
+        document.getElementById('testAuthInteractive').addEventListener('click', () => {
+            document.getElementById('result').className = 'result';
+            document.getElementById('result').textContent = 'Testing... (login popup may appear)';
+
+            chrome.identity.getAuthToken({ interactive: true }, (token) => {
+                const resultDiv = document.getElementById('result');
+                if (chrome.runtime.lastError) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ ERROR:\n${chrome.runtime.lastError.message}\n\nFull Error:\n${JSON.stringify(chrome.runtime.lastError, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ SUCCESS!\n\nToken: ${token.substring(0, 50)}...`;
+                }
+            });
+        });
+
+        // Clear auth token
+        document.getElementById('clearAuth').addEventListener('click', () => {
+            chrome.identity.getAuthToken({ interactive: false }, (token) => {
+                if (token) {
+                    chrome.identity.removeCachedAuthToken({ token }, () => {
+                        document.getElementById('result').className = 'result success';
+                        document.getElementById('result').textContent = '✅ Auth token cleared';
+                    });
+                } else {
+                    document.getElementById('result').className = 'result';
+                    document.getElementById('result').textContent = 'No token to clear';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
