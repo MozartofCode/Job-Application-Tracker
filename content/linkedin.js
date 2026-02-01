@@ -60,6 +60,52 @@ function getTextFromSelectors(selectors) {
     return null;
 }
 
+// Extract salary from job description body as fallback
+function extractSalaryFromBody() {
+    const description = getTextFromSelectors(SELECTORS.description);
+    if (!description) return null;
+
+    // Look for common salary patterns in the description
+    const salaryPatterns = [
+        /\$[\d,]+\s*-\s*\$[\d,]+(?:\s*(?:per|\/)\s*(?:year|yr|annum|hour|hr))?/gi,
+        /\$[\d]+k\s*-\s*\$[\d]+k/gi,
+        /salary.*?\$[\d,]+/gi,
+        /compensation.*?\$[\d,]+/gi,
+        /[\d,]+\s*-\s*[\d,]+\s*(?:USD|dollars)/gi
+    ];
+
+    for (const pattern of salaryPatterns) {
+        const match = description.match(pattern);
+        if (match) {
+            return match[0].trim();
+        }
+    }
+
+    return null;
+}
+
+// Extract location from job description body as fallback
+function extractLocationFromBody() {
+    const description = getTextFromSelectors(SELECTORS.description);
+    if (!description) return null;
+
+    // Look for common location patterns
+    const locationPatterns = [
+        /(?:location|based in|office in|located in):?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2})/i,
+        /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2})(?:\s+or\s+Remote)?/,
+        /(?:Remote|Hybrid).*?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2})/i
+    ];
+
+    for (const pattern of locationPatterns) {
+        const match = description.match(pattern);
+        if (match) {
+            return match[1] || match[0].trim();
+        }
+    }
+
+    return null;
+}
+
 // Extract unique job ID from LinkedIn URL
 function getJobId() {
     const urlMatch = window.location.href.match(/\/jobs\/view\/(\d+)/);
@@ -71,7 +117,7 @@ function getJobId() {
 }
 
 function extractJobData() {
-    const data = {
+    let data = {
         title: getTextFromSelectors(SELECTORS.title),
         company: getTextFromSelectors(SELECTORS.company),
         location: getTextFromSelectors(SELECTORS.location),
@@ -81,6 +127,14 @@ function extractJobData() {
         platform: 'LinkedIn',
         status: 'Saved'
     };
+
+        // Try to get from body if not found in header if not found in header
+    if (!data.salary) {
+        data.salary = extractSalaryFromBody();
+    }
+    if (!data.location) {
+        data.location = extractLocationFromBody();
+    }
 
     // Clean up location (remove extra info like date posted, etc.)
     if (data.location) {
@@ -227,18 +281,32 @@ async function handleCaptureClick(event) {
 // =======================
 
 async function injectCaptureButton() {
-    // Check if button already exists
-    if (document.getElementById('jobflow-capture-btn')) {
-        return;
-    }
-
     // Try to find the job title container
     const titleContainer = document.querySelector(
         '.job-details-jobs-unified-top-card__job-title, .jobs-unified-top-card__job-title, h1.t-24'
     );
 
     if (titleContainer) {
+        // Check if button already exists - if so, check if we need to update it
+        const existingButton = document.getElementById('jobflow-capture-btn');
+        const currentJobId = getJobId();
+
+        if (existingButton) {
+            // Check if the job ID changed - if so, remove old button and re-inject
+            const buttonJobId = existingButton.getAttribute('data-job-id');
+            if (buttonJobId === currentJobId) {
+                return; // Same job, keep existing button
+            }
+            // Different job - remove old button and wrapper
+            const wrapper = existingButton.parentElement;
+            if (wrapper) {
+                wrapper.remove();
+            }
+        }
+
         const button = await createCaptureButton();
+        // Store job ID on button for future comparison
+        button.setAttribute('data-job-id', currentJobId);
 
         // Insert button inline right after the title element
         // Find the best container that holds the title
@@ -253,12 +321,13 @@ async function injectCaptureButton() {
             buttonWrapper.style.alignItems = 'center';
             buttonWrapper.style.gap = '12px';
             buttonWrapper.style.marginTop = '8px';
+            buttonWrapper.className = 'jobflow-button-wrapper';
 
             buttonWrapper.appendChild(button);
 
             // Insert after the title container
             titleContainer.parentElement.insertBefore(buttonWrapper, titleContainer.nextSibling);
-            console.log('✅ Capture button injected');
+            console.log('✅ Capture button injected for job:', currentJobId);
         }
     }
 }
@@ -274,15 +343,31 @@ if (document.readyState === 'loading') {
     injectCaptureButton();
 }
 
-// Re-inject on dynamic content changes (LinkedIn uses heavy AJAX)
+// Re-inject on dynamic content changes and URL changes (LinkedIn uses heavy AJAX)
 let lastUrl = window.location.href;
+let lastJobId = getJobId();
 let injectionTimeout;
 
 const observer = new MutationObserver(() => {
-    // Check if URL changed (for internal tracking/reset if needed)
-    if (window.location.href !== lastUrl) {
-        lastUrl = window.location.href;
-        // Optionally remove old button if needed, but usually redundant as DOM is replaced
+    const currentUrl = window.location.href;
+    const currentJobId = getJobId();
+
+    // Check if URL or job ID changed
+    if (currentUrl !== lastUrl || currentJobId !== lastJobId) {
+        console.log('🔄 Job changed, updating button...');
+        lastUrl = currentUrl;
+        lastJobId = currentJobId;
+
+        // Remove old button immediately when job changes
+        const oldButton = document.getElementById('jobflow-capture-btn');
+        if (oldButton) {
+            const wrapper = oldButton.parentElement;
+            if (wrapper && wrapper.className === 'jobflow-button-wrapper') {
+                wrapper.remove();
+            } else {
+                oldButton.remove();
+            }
+        }
     }
 
     // Debounce the injection call to avoid performance hits
