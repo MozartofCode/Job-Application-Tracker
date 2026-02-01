@@ -16,9 +16,12 @@ async function getAuthToken(interactive = false) {
   return new Promise((resolve, reject) => {
     chrome.identity.getAuthToken({ interactive }, (token) => {
       if (chrome.runtime.lastError) {
-        console.error('Auth error:', chrome.runtime.lastError);
-        reject(chrome.runtime.lastError);
+        const errorMsg = chrome.runtime.lastError.message || JSON.stringify(chrome.runtime.lastError);
+        console.error('❌ Auth error details:', errorMsg);
+        console.error('Full error object:', chrome.runtime.lastError);
+        reject(new Error(errorMsg));
       } else {
+        console.log('✅ Auth token obtained successfully');
         authToken = token;
         resolve(token);
       }
