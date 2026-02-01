@@ -116,20 +116,26 @@ function extractJobData() {
     return data;
 }
 
+// Generate a unique job identifier from URL
+function getJobId() {
+    // Use pathname as identifier (removes query params that might change)
+    return window.location.pathname + window.location.search.split('?')[0];
+}
+
 // =======================
 // UI Injection - Floating "Capture Job" Button
 // =======================
 
-// Track saved jobs in storage
-async function isJobSaved(url) {
+// Track saved jobs in storage using job ID
+async function isJobSaved(jobId) {
     const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
-    return savedJobs.includes(url);
+    return savedJobs.includes(jobId);
 }
 
-async function markJobAsSaved(url) {
+async function markJobAsSaved(jobId) {
     const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
-    if (!savedJobs.includes(url)) {
-        savedJobs.push(url);
+    if (!savedJobs.includes(jobId)) {
+        savedJobs.push(jobId);
         await chrome.storage.local.set({ savedJobs });
     }
 }
@@ -139,9 +145,9 @@ async function createFloatingButton() {
     button.id = 'jobflow-floating-btn';
     button.className = 'jobflow-floating-button';
 
-    // Check if this job was already saved
-    const currentUrl = window.location.href;
-    const alreadySaved = await isJobSaved(currentUrl);
+    // Check if this job was already saved using job ID
+    const jobId = getJobId();
+    const alreadySaved = await isJobSaved(jobId);
 
     if (alreadySaved) {
         button.innerHTML = `
@@ -198,8 +204,9 @@ async function handleCaptureClick(event) {
         });
 
         if (response.success) {
-            // Mark job as saved in storage
-            await markJobAsSaved(window.location.href);
+            // Mark job as saved in storage using job ID
+            const jobId = getJobId();
+            await markJobAsSaved(jobId);
 
             // Show success state PERMANENTLY
             button.classList.remove('jobflow-loading');

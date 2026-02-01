@@ -21,12 +21,18 @@ const SELECTORS = {
         '[data-job-company-name]'
     ],
     location: [
+        '.job-details-jobs-unified-top-card__primary-description',
+        '.jobs-unified-top-card__primary-description',
         '.job-details-jobs-unified-top-card__bullet',
         '.jobs-unified-top-card__bullet',
+        'span.tvm__text.tvm__text--low-emphasis',
         '[data-job-location]'
     ],
     salary: [
+        '.job-details-jobs-unified-top-card__job-insight--highlight',
         '.job-details-jobs-unified-top-card__job-insight',
+        '.compensation__salary',
+        'li.job-details-jobs-unified-top-card__job-insight',
         '.mt5.mb2 span'
     ],
     description: [
@@ -42,13 +48,26 @@ const SELECTORS = {
 
 function getTextFromSelectors(selectors) {
     for (const selector of selectors) {
-        const element = document.querySelector(selector);
-        if (element) {
+        const elements = document.querySelectorAll(selector);
+        for (const element of elements) {
             const text = element.textContent.trim();
-            if (text) return text;
+            // Skip if it's just empty or too generic
+            if (text && text.length > 0 && text.length < 500) {
+                return text;
+            }
         }
     }
     return null;
+}
+
+// Extract unique job ID from LinkedIn URL
+function getJobId() {
+    const urlMatch = window.location.href.match(/\/jobs\/view\/(\d+)/);
+    if (urlMatch) {
+        return urlMatch[1];
+    }
+    // Fallback to current URL if no job ID found
+    return window.location.pathname;
 }
 
 function extractJobData() {
@@ -63,9 +82,23 @@ function extractJobData() {
         status: 'Saved'
     };
 
-    // Clean up location (remove extra info)
+    // Clean up location (remove extra info like date posted, etc.)
     if (data.location) {
-        data.location = data.location.split('·')[0].trim();
+        data.location = data.location
+            .split('·')[0]
+            .split('(')
+        [0]
+            .replace(/\d+\s+(day|hour|week|month)s?\s+ago/gi, '')
+            .trim();
+    }
+
+    // Clean up salary (extract just the salary range)
+    if (data.salary) {
+        // Look for patterns like $XX,XXX - $XX,XXX or $XXk - $XXk
+        const salaryMatch = data.salary.match(/\$[\d,]+\s*-\s*\$[\d,]+|\$[\d]+k\s*-\s*\$[\d]+k/i);
+        if (salaryMatch) {
+            data.salary = salaryMatch[0];
+        }
     }
 
     console.log('📊 Extracted job data:', data);
@@ -76,16 +109,16 @@ function extractJobData() {
 // UI Injection - "Capture Job" Button
 // =======================
 
-// Track saved jobs in storage
-async function isJobSaved(url) {
+// Track saved jobs in storage using unique job ID
+async function isJobSaved(jobId) {
     const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
-    return savedJobs.includes(url);
+    return savedJobs.includes(jobId);
 }
 
-async function markJobAsSaved(url) {
+async function markJobAsSaved(jobId) {
     const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
-    if (!savedJobs.includes(url)) {
-        savedJobs.push(url);
+    if (!savedJobs.includes(jobId)) {
+        savedJobs.push(jobId);
         await chrome.storage.local.set({ savedJobs });
     }
 }
@@ -95,9 +128,9 @@ async function createCaptureButton() {
     button.id = 'jobflow-capture-btn';
     button.className = 'jobflow-capture-button';
 
-    // Check if this job was already saved
-    const currentUrl = window.location.href;
-    const alreadySaved = await isJobSaved(currentUrl);
+    // Check if this job was already saved using job ID
+    const jobId = getJobId();
+    const alreadySaved = await isJobSaved(jobId);
 
     if (alreadySaved) {
         button.innerHTML = `
@@ -147,8 +180,9 @@ async function handleCaptureClick(event) {
         });
 
         if (response.success) {
-            // Mark job as saved in storage
-            await markJobAsSaved(window.location.href);
+            // Mark job as saved in storage using job ID
+            const jobId = getJobId();
+            await markJobAsSaved(jobId);
 
             // Show success state PERMANENTLY
             button.innerHTML = `
@@ -206,11 +240,24 @@ async function injectCaptureButton() {
     if (titleContainer) {
         const button = await createCaptureButton();
 
-        // Insert button next to the title
-        const wrapper = titleContainer.parentElement;
-        if (wrapper) {
-            wrapper.style.position = 'relative';
-            wrapper.appendChild(button);
+        // Insert button inline right after the title element
+        // Find the best container that holds the title
+        const titleParent = titleContainer.closest('.job-details-jobs-unified-top-card__container--two-pane')
+            || titleContainer.closest('.jobs-unified-top-card__content')
+            || titleContainer.parentElement;
+
+        if (titleParent) {
+            // Create a wrapper div to hold title and button inline
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.style.display = 'inline-flex';
+            buttonWrapper.style.alignItems = 'center';
+            buttonWrapper.style.gap = '12px';
+            buttonWrapper.style.marginTop = '8px';
+
+            buttonWrapper.appendChild(button);
+
+            // Insert after the title container
+            titleContainer.parentElement.insertBefore(buttonWrapper, titleContainer.nextSibling);
             console.log('✅ Capture button injected');
         }
     }

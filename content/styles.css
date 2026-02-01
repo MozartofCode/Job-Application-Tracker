@@ -20,7 +20,8 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  margin-left: 16px;
+  margin-left: 0;
+  margin-top: 0;
   background: var(--jobflow-gradient);
   color: white !important;
   border: none;
@@ -32,7 +33,7 @@
   box-shadow: var(--jobflow-shadow);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 9999;
-  position: relative;
+  vertical-align: middle;
 }
 
 .jobflow-capture-button:hover {
@@ -128,6 +129,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -188,6 +190,7 @@
    ======================= */
 
 @media (prefers-color-scheme: dark) {
+
   .jobflow-capture-button,
   .jobflow-floating-button {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
