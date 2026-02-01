@@ -106,11 +106,28 @@ function extractLocationFromBody() {
 
 // Extract unique job ID from LinkedIn URL
 function getJobId() {
-    const urlMatch = window.location.href.match(/\/jobs\/view\/(\d+)/);
-    if (urlMatch) {
-        return urlMatch[1];
+    const url = window.location.href;
+    console.log('🔗 Current URL:', url);
+
+    // Try different LinkedIn URL patterns
+    const patterns = [
+        /\/jobs\/view\/(\d+)/,           // /jobs/view/1234567
+        /currentJobId=(\d+)/,             // ?currentJobId=1234567
+        /\/jobs\/collections\/.*?\/(\d+)/ // /jobs/collections/.../1234567
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) {
+            console.log('✅ Extracted job ID:', match[1], 'using pattern:', pattern);
+            return match[1];
+        }
     }
-    return window.location.pathname;
+
+    // Fallback to pathname
+    const fallback = window.location.pathname;
+    console.log('⚠️ No job ID found, using pathname fallback:', fallback);
+    return fallback;
 }
 
 function extractJobData() {
@@ -161,7 +178,11 @@ function extractJobData() {
 // Track saved jobs in storage using unique job ID
 async function isJobSaved(jobId) {
     const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
-    return savedJobs.includes(jobId);
+    console.log('💾 Storage check - Job ID:', jobId);
+    console.log('💾 All saved jobs:', savedJobs);
+    const isSaved = savedJobs.includes(jobId);
+    console.log('💾 Is this job saved?', isSaved);
+    return isSaved;
 }
 
 async function markJobAsSaved(jobId) {
@@ -169,6 +190,8 @@ async function markJobAsSaved(jobId) {
     if (!savedJobs.includes(jobId)) {
         savedJobs.push(jobId);
         await chrome.storage.local.set({ savedJobs });
+        console.log('💾 Job marked as saved:', jobId);
+        console.log('💾 Updated saved jobs list:', savedJobs);
     }
 }
 
@@ -413,3 +436,25 @@ observer.observe(document.body, {
 });
 
 console.log('🔵 JobFlow LinkedIn scraper initialized');
+
+// =======================
+// Debug Helper Functions (available in console)
+// =======================
+
+// Clear all saved jobs from storage
+window.JobFlowClearSavedJobs = async function () {
+    await chrome.storage.local.set({ savedJobs: [] });
+    console.log('🗑️ All saved jobs cleared! Reload the page to see "Capture Job" buttons.');
+};
+
+// View all saved jobs
+window.JobFlowViewSavedJobs = async function () {
+    const { savedJobs = [] } = await chrome.storage.local.get('savedJobs');
+    console.log('💾 Saved jobs:', savedJobs);
+    console.log('📊 Total saved:', savedJobs.length);
+    return savedJobs;
+};
+
+console.log('💡 Debug helpers available:');
+console.log('   - JobFlowClearSavedJobs() - Clear all saved jobs');
+console.log('   - JobFlowViewSavedJobs() - View all saved jobs');
