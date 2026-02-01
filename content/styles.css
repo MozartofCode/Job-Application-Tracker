@@ -1,0 +1,200 @@
+/* JobFlow Extension Styles */
+/* Beautiful, modern UI for capture buttons */
+
+:root {
+  --jobflow-primary: #5b4fc7;
+  --jobflow-primary-dark: #4a3fb0;
+  --jobflow-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --jobflow-success: #10b981;
+  --jobflow-error: #ef4444;
+  --jobflow-shadow: 0 4px 12px rgba(91, 79, 199, 0.25);
+  --jobflow-shadow-lg: 0 10px 30px rgba(91, 79, 199, 0.35);
+}
+
+/* =======================
+   LinkedIn Inline Button
+   ======================= */
+
+.jobflow-capture-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  margin-left: 16px;
+  background: var(--jobflow-gradient);
+  color: white !important;
+  border: none;
+  border-radius: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--jobflow-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9999;
+  position: relative;
+}
+
+.jobflow-capture-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--jobflow-shadow-lg);
+}
+
+.jobflow-capture-button:active {
+  transform: translateY(0);
+}
+
+.jobflow-capture-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.jobflow-capture-button.jobflow-success {
+  background: var(--jobflow-success);
+}
+
+.jobflow-capture-button.jobflow-error {
+  background: var(--jobflow-error);
+}
+
+/* =======================
+   Floating Action Button (Career Sites)
+   ======================= */
+
+.jobflow-floating-button {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: var(--jobflow-gradient);
+  color: white !important;
+  border: none;
+  border-radius: 50px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--jobflow-shadow-lg);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999999;
+  backdrop-filter: blur(10px);
+}
+
+.jobflow-floating-button:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 40px rgba(91, 79, 199, 0.45);
+}
+
+.jobflow-floating-button:active {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.jobflow-floating-button:disabled {
+  cursor: not-allowed;
+}
+
+.jobflow-floating-button.jobflow-loading {
+  background: var(--jobflow-primary-dark);
+}
+
+.jobflow-floating-button.jobflow-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.jobflow-floating-button.jobflow-error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.jobflow-fab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.jobflow-fab-text {
+  white-space: nowrap;
+}
+
+/* =======================
+   Spinner Animation
+   ======================= */
+
+@keyframes jobflow-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.jobflow-spinner {
+  animation: jobflow-spin 0.8s linear infinite;
+}
+
+/* =======================
+   Responsive Design
+   ======================= */
+
+@media (max-width: 768px) {
+  .jobflow-floating-button {
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  .jobflow-fab-text {
+    display: none;
+  }
+
+  .jobflow-floating-button {
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .jobflow-capture-button {
+    font-size: 13px;
+    padding: 8px 16px;
+    margin-left: 8px;
+  }
+}
+
+/* =======================
+   Accessibility
+   ======================= */
+
+.jobflow-capture-button:focus,
+.jobflow-floating-button:focus {
+  outline: 3px solid rgba(91, 79, 199, 0.4);
+  outline-offset: 2px;
+}
+
+.jobflow-capture-button:focus:not(:focus-visible),
+.jobflow-floating-button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* =======================
+   Dark Mode Support
+   ======================= */
+
+@media (prefers-color-scheme: dark) {
+  .jobflow-capture-button,
+  .jobflow-floating-button {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  .jobflow-capture-button:hover,
+  .jobflow-floating-button:hover {
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+  }
+}

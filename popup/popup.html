@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobFlow</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="logo-section">
+        <img src="../assets/icon48.png" alt="JobFlow" class="logo">
+        <h1>JobFlow</h1>
+      </div>
+      <div class="status-indicator" id="authStatus">
+        <div class="status-dot"></div>
+        <span id="statusText">Checking...</span>
+      </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-section">
+      <div class="stat-card">
+        <div class="stat-value" id="totalJobs">-</div>
+        <div class="stat-label">Total Saved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="pendingJobs">-</div>
+        <div class="stat-label">Pending Sync</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="syncedJobs">-</div>
+        <div class="stat-label">Synced</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="actions-section">
+      <button id="openSheetBtn" class="action-btn primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Open Google Sheet
+      </button>
+      
+      <button id="syncNowBtn" class="action-btn secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12a9 9 0 11-9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M21 3v9h-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Sync Now
+      </button>
+    </div>
+
+    <!-- Auth Section (shown when not authenticated) -->
+    <div class="auth-section hidden" id="authSection">
+      <div class="auth-message">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h3>Authentication Required</h3>
+        <p>Connect JobFlow to your Google account to save jobs to your spreadsheet.</p>
+      </div>
+      <button id="authBtn" class="action-btn primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M15 3h6v6M10 14L21 3M7 7H4a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Connect Google Account
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div class="popup-footer">
+      <a href="#" id="helpLink" class="footer-link">Help</a>
+      <span class="separator">•</span>
+      <a href="#" id="settingsLink" class="footer-link">Settings</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
