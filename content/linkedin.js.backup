@@ -281,45 +281,55 @@ async function handleCaptureClick(event) {
 // =======================
 
 async function injectCaptureButton() {
-    // Find the job title element
-    const titleElement = document.querySelector(
+    // Try to find the job title container
+    const titleContainer = document.querySelector(
         '.job-details-jobs-unified-top-card__job-title, .jobs-unified-top-card__job-title, h1.t-24'
     );
 
-    if (!titleElement) {
-        return; // No title, can't inject
-    }
-
-    const currentJobId = getJobId();
-    
-    // Check if wrapper already exists
-    let wrapper = document.querySelector('.jobflow-button-wrapper');
-    
-    if (wrapper) {
+    if (titleContainer) {
+        // Check if button already exists - if so, check if we need to update it
         const existingButton = document.getElementById('jobflow-capture-btn');
+        const currentJobId = getJobId();
+
         if (existingButton) {
+            // Check if the job ID changed - if so, remove old button and re-inject
             const buttonJobId = existingButton.getAttribute('data-job-id');
             if (buttonJobId === currentJobId) {
-                return; // Same job, keep current button
+                return; // Same job, keep existing button
+            }
+            // Different job - remove old button and wrapper
+            const wrapper = existingButton.parentElement;
+            if (wrapper) {
+                wrapper.remove();
             }
         }
-        // Different job - remove old wrapper
-        wrapper.remove();
+
+        const button = await createCaptureButton();
+        // Store job ID on button for future comparison
+        button.setAttribute('data-job-id', currentJobId);
+
+        // Insert button inline right after the title element
+        // Find the best container that holds the title
+        const titleParent = titleContainer.closest('.job-details-jobs-unified-top-card__container--two-pane')
+            || titleContainer.closest('.jobs-unified-top-card__content')
+            || titleContainer.parentElement;
+
+        if (titleParent) {
+            // Create a wrapper div to hold title and button inline
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.style.display = 'inline-flex';
+            buttonWrapper.style.alignItems = 'center';
+            buttonWrapper.style.gap = '12px';
+            buttonWrapper.style.marginTop = '8px';
+            buttonWrapper.className = 'jobflow-button-wrapper';
+
+            buttonWrapper.appendChild(button);
+
+            // Insert after the title container
+            titleContainer.parentElement.insertBefore(buttonWrapper, titleContainer.nextSibling);
+            console.log('✅ Capture button injected for job:', currentJobId);
+        }
     }
-
-    // Create and configure new button
-    const button = await createCaptureButton();
-    button.setAttribute('data-job-id', currentJobId);
-
-    // Create new wrapper
-    wrapper = document.createElement('div');
-    wrapper.className = 'jobflow-button-wrapper';
-    wrapper.style.cssText = 'display: flex; align-items: center; margin-top: 12px;';
-    wrapper.appendChild(button);
-
-    // Insert after title
-    titleElement.parentNode.insertBefore(wrapper, titleElement.nextSibling);
-    console.log(' Button injected for job:', currentJobId);
 }
 
 // =======================
