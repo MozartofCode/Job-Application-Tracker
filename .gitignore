@@ -1,0 +1,40 @@
+# Sensitive files
+.env
+.env.local
+config.json
+
+# OAuth credentials (if using separate config files)
+credentials.json
+client_secret*.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+dist/
+build/
+*.zip
+
+# Chrome extension packaging
+*.pem
+*.crx
+
+# Node modules (if adding build tools later)
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+tmp/
+temp/
