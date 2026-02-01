@@ -2,6 +2,8 @@
 .env
 .env.local
 config.json
+manifest.json
+config.js
 
 # OAuth credentials (if using separate config files)
 credentials.json

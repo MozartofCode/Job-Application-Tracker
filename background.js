@@ -1,7 +1,8 @@
 // JobFlow Background Service Worker
 // Handles OAuth2 authentication, job queue management, and Google Sheets API calls
 
-const SPREADSHEET_ID = '1pZRhmdjj8g3e9BKjtxiHTrEEqyl9goGfagGdxWRLpAE';
+importScripts('config.js');
+// SPREADSHEET_ID is defined in config.js
 const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 // State management

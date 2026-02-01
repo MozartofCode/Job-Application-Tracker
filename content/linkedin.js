@@ -195,15 +195,22 @@ if (document.readyState === 'loading') {
     injectCaptureButton();
 }
 
-// Re-inject on navigation (LinkedIn is a SPA)
+// Re-inject on dynamic content changes (LinkedIn uses heavy AJAX)
 let lastUrl = window.location.href;
+let injectionTimeout;
+
 const observer = new MutationObserver(() => {
+    // Check if URL changed (for internal tracking/reset if needed)
     if (window.location.href !== lastUrl) {
         lastUrl = window.location.href;
-
-        // Wait a bit for content to load
-        setTimeout(injectCaptureButton, 1000);
+        // Optionally remove old button if needed, but usually redundant as DOM is replaced
     }
+
+    // Debounce the injection call to avoid performance hits
+    clearTimeout(injectionTimeout);
+    injectionTimeout = setTimeout(() => {
+        injectCaptureButton();
+    }, 500);
 });
 
 observer.observe(document.body, {
