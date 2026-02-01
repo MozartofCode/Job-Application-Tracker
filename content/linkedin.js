@@ -12,6 +12,7 @@ const SELECTORS = {
         '.job-details-jobs-unified-top-card__job-title',
         '.jobs-unified-top-card__job-title',
         'h1.t-24',
+        'h1',
         '[data-job-title]'
     ],
     company: [
@@ -51,7 +52,6 @@ function getTextFromSelectors(selectors) {
         const elements = document.querySelectorAll(selector);
         for (const element of elements) {
             const text = element.textContent.trim();
-            // Skip if it's just empty or too generic
             if (text && text.length > 0 && text.length < 500) {
                 return text;
             }
@@ -65,7 +65,6 @@ function extractSalaryFromBody() {
     const description = getTextFromSelectors(SELECTORS.description);
     if (!description) return null;
 
-    // Look for common salary patterns in the description
     const salaryPatterns = [
         /\$[\d,]+\s*-\s*\$[\d,]+(?:\s*(?:per|\/)\s*(?:year|yr|annum|hour|hr))?/gi,
         /\$[\d]+k\s*-\s*\$[\d]+k/gi,
@@ -89,7 +88,6 @@ function extractLocationFromBody() {
     const description = getTextFromSelectors(SELECTORS.description);
     if (!description) return null;
 
-    // Look for common location patterns
     const locationPatterns = [
         /(?:location|based in|office in|located in):?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2})/i,
         /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2})(?:\s+or\s+Remote)?/,
@@ -112,7 +110,6 @@ function getJobId() {
     if (urlMatch) {
         return urlMatch[1];
     }
-    // Fallback to current URL if no job ID found
     return window.location.pathname;
 }
 
@@ -128,7 +125,7 @@ function extractJobData() {
         status: 'Saved'
     };
 
-        // Try to get from body if not found in header if not found in header
+    // Try to get from body if not found in header
     if (!data.salary) {
         data.salary = extractSalaryFromBody();
     }
@@ -136,19 +133,17 @@ function extractJobData() {
         data.location = extractLocationFromBody();
     }
 
-    // Clean up location (remove extra info like date posted, etc.)
+    // Clean up location
     if (data.location) {
         data.location = data.location
             .split('·')[0]
-            .split('(')
-        [0]
+            .split('(')[0]
             .replace(/\d+\s+(day|hour|week|month)s?\s+ago/gi, '')
             .trim();
     }
 
-    // Clean up salary (extract just the salary range)
+    // Clean up salary
     if (data.salary) {
-        // Look for patterns like $XX,XXX - $XX,XXX or $XXk - $XXk
         const salaryMatch = data.salary.match(/\$[\d,]+\s*-\s*\$[\d,]+|\$[\d]+k\s*-\s*\$[\d]+k/i);
         if (salaryMatch) {
             data.salary = salaryMatch[0];
@@ -182,7 +177,6 @@ async function createCaptureButton() {
     button.id = 'jobflow-capture-btn';
     button.className = 'jobflow-capture-button';
 
-    // Check if this job was already saved using job ID
     const jobId = getJobId();
     const alreadySaved = await isJobSaved(jobId);
 
@@ -215,7 +209,6 @@ async function handleCaptureClick(event) {
     const button = event.currentTarget;
 
     try {
-        // Show loading state
         button.disabled = true;
         button.innerHTML = `
       <svg class="jobflow-spinner" width="16" height="16" viewBox="0 0 24 24">
@@ -225,7 +218,6 @@ async function handleCaptureClick(event) {
       <span>Saving...</span>
     `;
 
-        // Extract and save job data
         const jobData = extractJobData();
 
         const response = await chrome.runtime.sendMessage({
@@ -234,11 +226,9 @@ async function handleCaptureClick(event) {
         });
 
         if (response.success) {
-            // Mark job as saved in storage using job ID
             const jobId = getJobId();
             await markJobAsSaved(jobId);
 
-            // Show success state PERMANENTLY
             button.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -246,7 +236,6 @@ async function handleCaptureClick(event) {
         <span>Saved!</span>
       `;
             button.classList.add('jobflow-success');
-            // Keep button disabled - no reset!
         } else {
             throw new Error(response.error || 'Failed to save');
         }
@@ -262,7 +251,6 @@ async function handleCaptureClick(event) {
     `;
         button.classList.add('jobflow-error');
 
-        // Only reset on error after 2 seconds
         setTimeout(() => {
             button.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -281,59 +269,118 @@ async function handleCaptureClick(event) {
 // =======================
 
 async function injectCaptureButton() {
-    // Find the job title element
-    const titleElement = document.querySelector(
-        '.job-details-jobs-unified-top-card__job-title, .jobs-unified-top-card__job-title, h1.t-24'
-    );
+    console.log('🔍 Attempting to inject button...');
 
-    if (!titleElement) {
-        return; // No title, can't inject
+    // Log all h1 elements to see what's on the page
+    const allH1s = document.querySelectorAll('h1');
+    console.log('📝 Found', allH1s.length, 'h1 elements on page');
+    allH1s.forEach((h1, idx) => {
+        console.log(`  H1 #${idx}:`, h1.textContent.substring(0, 50), '| Classes:', h1.className);
+    });
+
+    // Try to find the job title element with multiple strategies
+    let titleElement = null;
+
+    // Strategy 1: Try all our selectors
+    for (const selector of SELECTORS.title) {
+        titleElement = document.querySelector(selector);
+        if (titleElement) {
+            console.log('✅ Found title with selector:', selector);
+            break;
+        } else {
+            console.log('❌ Selector failed:', selector);
+        }
     }
 
+    // Strategy 2: If still not found, use the first h1 that looks like a job title
+    if (!titleElement && allH1s.length > 0) {
+        for (const h1 of allH1s) {
+            const text = h1.textContent.trim();
+            if (text.length > 10 && text.length < 200) {
+                titleElement = h1;
+                console.log('✅ Using fallback h1:', text.substring(0, 50));
+                break;
+            }
+        }
+    }
+
+    if (!titleElement) {
+        console.error('❌ Could not find title element on page');
+        return;
+    }
+
+    console.log('📍 Title element found:', titleElement.textContent.substring(0, 50));
+    console.log('📍 Title element parent:', titleElement.parentNode);
+
     const currentJobId = getJobId();
-    
+    console.log('🆔 Current job ID:', currentJobId);
+
     // Check if wrapper already exists
     let wrapper = document.querySelector('.jobflow-button-wrapper');
-    
+
     if (wrapper) {
+        console.log('🔄 Wrapper already exists, checking job ID...');
         const existingButton = document.getElementById('jobflow-capture-btn');
         if (existingButton) {
             const buttonJobId = existingButton.getAttribute('data-job-id');
+            console.log('🆔 Existing button job ID:', buttonJobId);
             if (buttonJobId === currentJobId) {
-                return; // Same job, keep current button
+                console.log('✅ Same job, keeping current button');
+                return;
             }
         }
-        // Different job - remove old wrapper
+        console.log('🗑️ Different job - removing old wrapper');
         wrapper.remove();
     }
 
     // Create and configure new button
+    console.log('🔨 Creating new button...');
     const button = await createCaptureButton();
     button.setAttribute('data-job-id', currentJobId);
 
     // Create new wrapper
     wrapper = document.createElement('div');
     wrapper.className = 'jobflow-button-wrapper';
-    wrapper.style.cssText = 'display: flex; align-items: center; margin-top: 12px;';
+    wrapper.style.cssText = 'display: flex; align-items: center; margin-top: 12px; margin-bottom: 12px;';
     wrapper.appendChild(button);
 
     // Insert after title
-    titleElement.parentNode.insertBefore(wrapper, titleElement.nextSibling);
-    console.log(' Button injected for job:', currentJobId);
+    try {
+        if (titleElement.nextSibling) {
+            titleElement.parentNode.insertBefore(wrapper, titleElement.nextSibling);
+        } else {
+            titleElement.parentNode.appendChild(wrapper);
+        }
+        console.log('✅ Button successfully injected for job:', currentJobId);
+    } catch (error) {
+        console.error('❌ Error inserting button:', error);
+    }
 }
 
 // =======================
 // Initialization
 // =======================
 
-// Inject button when page loads
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectCaptureButton);
-} else {
+console.log('🚀 Initializing JobFlow...');
+
+// Initial injection
+setTimeout(() => {
+    console.log('⏰ Running initial injection (after 1s delay)');
     injectCaptureButton();
+}, 1000);
+
+// Also try immediately
+if (document.readyState !== 'loading') {
+    console.log('⏰ Document ready, injecting immediately');
+    injectCaptureButton();
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('⏰ DOMContentLoaded fired, injecting');
+        injectCaptureButton();
+    });
 }
 
-// Re-inject on dynamic content changes and URL changes (LinkedIn uses heavy AJAX)
+// Watch for URL changes and re-inject
 let lastUrl = window.location.href;
 let lastJobId = getJobId();
 let injectionTimeout;
@@ -342,25 +389,18 @@ const observer = new MutationObserver(() => {
     const currentUrl = window.location.href;
     const currentJobId = getJobId();
 
-    // Check if URL or job ID changed
     if (currentUrl !== lastUrl || currentJobId !== lastJobId) {
         console.log('🔄 Job changed, updating button...');
         lastUrl = currentUrl;
         lastJobId = currentJobId;
 
-        // Remove old button immediately when job changes
-        const oldButton = document.getElementById('jobflow-capture-btn');
-        if (oldButton) {
-            const wrapper = oldButton.parentElement;
-            if (wrapper && wrapper.className === 'jobflow-button-wrapper') {
-                wrapper.remove();
-            } else {
-                oldButton.remove();
-            }
+        const oldWrapper = document.querySelector('.jobflow-button-wrapper');
+        if (oldWrapper) {
+            oldWrapper.remove();
+            console.log('🗑️ Removed old wrapper on URL change');
         }
     }
 
-    // Debounce the injection call to avoid performance hits
     clearTimeout(injectionTimeout);
     injectionTimeout = setTimeout(() => {
         injectCaptureButton();
