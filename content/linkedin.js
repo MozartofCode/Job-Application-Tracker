@@ -293,6 +293,8 @@ async function handleCaptureClick(event) {
 
 async function injectCaptureButton() {
     console.log('🔍 Attempting to inject button...');
+    console.log('🌐 Current URL:', window.location.href);
+    console.log('📄 Document ready state:', document.readyState);
 
     // Log all h1 elements to see what's on the page
     const allH1s = document.querySelectorAll('h1');
@@ -303,12 +305,16 @@ async function injectCaptureButton() {
 
     // Try to find the job title element with multiple strategies
     let titleElement = null;
+    let insertionPoint = null;
+    let strategyUsed = '';
 
     // Strategy 1: Try all our selectors
     for (const selector of SELECTORS.title) {
         titleElement = document.querySelector(selector);
         if (titleElement) {
             console.log('✅ Found title with selector:', selector);
+            strategyUsed = 'Selector: ' + selector;
+            insertionPoint = titleElement;
             break;
         } else {
             console.log('❌ Selector failed:', selector);
@@ -321,19 +327,56 @@ async function injectCaptureButton() {
             const text = h1.textContent.trim();
             if (text.length > 10 && text.length < 200) {
                 titleElement = h1;
+                strategyUsed = 'Fallback H1';
+                insertionPoint = h1;
                 console.log('✅ Using fallback h1:', text.substring(0, 50));
                 break;
             }
         }
     }
 
+    // Strategy 3: Find common LinkedIn job containers as fallback
     if (!titleElement) {
-        console.error('❌ Could not find title element on page');
-        return;
+        const containers = [
+            '.jobs-unified-top-card',
+            '.job-details-jobs-unified-top-card',
+            '.jobs-details__main-content',
+            'main'
+        ];
+
+        for (const containerSel of containers) {
+            const container = document.querySelector(containerSel);
+            if (container) {
+                console.log('⚠️ Using container fallback:', containerSel);
+                insertionPoint = container;
+                strategyUsed = 'Container fallback: ' + containerSel;
+                break;
+            }
+        }
     }
 
-    console.log('📍 Title element found:', titleElement.textContent.substring(0, 50));
-    console.log('📍 Title element parent:', titleElement.parentNode);
+    if (!insertionPoint) {
+        console.error('❌ Could not find ANY insertion point on page');
+        console.error('❌ Page structure may have changed or this is not a job page');
+        console.log('💡 Trying body fallback...');
+
+        // Last resort: try to inject at the top of body
+        const body = document.querySelector('body');
+        if (body && body.children.length > 0) {
+            insertionPoint = body.children[0];
+            strategyUsed = 'Body fallback';
+            console.log('⚠️ Using body fallback - button may appear in wrong location');
+        } else {
+            console.error('❌ Complete failure - cannot inject anywhere');
+            return;
+        }
+    }
+
+    console.log('📍 Insertion point:', strategyUsed);
+    if (titleElement) {
+        console.log('📍 Title text:', titleElement.textContent.substring(0, 50));
+    }
+    console.log('📍 Parent node:', insertionPoint.parentNode?.tagName);
 
     const currentJobId = getJobId();
     console.log('🆔 Current job ID:', currentJobId);
@@ -349,6 +392,17 @@ async function injectCaptureButton() {
             console.log('🆔 Existing button job ID:', buttonJobId);
             if (buttonJobId === currentJobId) {
                 console.log('✅ Same job, keeping current button');
+
+                // Verify button is visible
+                const rect = wrapper.getBoundingClientRect();
+                console.log('👁️ Button visibility:', {
+                    width: rect.width,
+                    height: rect.height,
+                    top: rect.top,
+                    display: window.getComputedStyle(wrapper).display,
+                    visible: rect.width > 0 && rect.height > 0
+                });
+
                 return;
             }
         }
@@ -361,22 +415,63 @@ async function injectCaptureButton() {
     const button = await createCaptureButton();
     button.setAttribute('data-job-id', currentJobId);
 
-    // Create new wrapper
+    // Create new wrapper with enhanced visibility
     wrapper = document.createElement('div');
     wrapper.className = 'jobflow-button-wrapper';
-    wrapper.style.cssText = 'display: flex; align-items: center; margin-top: 12px; margin-bottom: 12px;';
+    wrapper.id = 'jobflow-wrapper-' + Date.now();
+    wrapper.style.cssText = `
+        display: flex !important;
+        align-items: center;
+        margin-top: 12px;
+        margin-bottom: 12px;
+        z-index: 9999;
+        visibility: visible !important;
+        opacity: 1 !important;
+    `;
     wrapper.appendChild(button);
 
-    // Insert after title
+    // Insert after title or at insertion point
     try {
-        if (titleElement.nextSibling) {
+        if (titleElement && titleElement.nextSibling) {
             titleElement.parentNode.insertBefore(wrapper, titleElement.nextSibling);
-        } else {
+            console.log('✅ Button inserted after title element');
+        } else if (titleElement) {
             titleElement.parentNode.appendChild(wrapper);
+            console.log('✅ Button appended to title parent');
+        } else {
+            // Fallback insertion
+            insertionPoint.insertAdjacentElement('afterbegin', wrapper);
+            console.log('⚠️ Button inserted at fallback location (may not be ideal)');
         }
+
         console.log('✅ Button successfully injected for job:', currentJobId);
+
+        // Verify injection
+        const injectedWrapper = document.getElementById(wrapper.id);
+        if (injectedWrapper) {
+            const rect = injectedWrapper.getBoundingClientRect();
+            console.log('✅ Button confirmed in DOM');
+            console.log('👁️ Button dimensions:', {
+                width: rect.width,
+                height: rect.height,
+                top: rect.top,
+                left: rect.left
+            });
+            console.log('👁️ Button styles:', {
+                display: window.getComputedStyle(injectedWrapper).display,
+                visibility: window.getComputedStyle(injectedWrapper).visibility,
+                opacity: window.getComputedStyle(injectedWrapper).opacity
+            });
+
+            if (rect.width === 0 || rect.height === 0) {
+                console.error('⚠️ WARNING: Button is in DOM but has zero size!');
+            }
+        } else {
+            console.error('❌ Button injection failed - not found in DOM');
+        }
     } catch (error) {
         console.error('❌ Error inserting button:', error);
+        console.error('Error details:', error.stack);
     }
 }
 

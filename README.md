@@ -14,6 +14,202 @@
 
 ## ✨ Features
 
+- **🎯 One-Click Capture**: Beautiful "Capture Job" button appears on job postings.
+- **📊 Auto-Save to Google Sheets**: Jobs automatically sync to your spreadsheet.
+- **💾 Smart Tracking**: Once saved, jobs stay marked as "Saved" - no duplicate entries!
+- **🔄 Offline Queue**: Jobs saved locally and synced when online.
+- **💼 LinkedIn Optimized**: Specifically designed scraping for LinkedIn job detail pages.
+- **🌐 Universal Scraper**: Works on most company career sites.
+- **🔐 Secure OAuth2**: Uses Google's official authentication.
+- **📱 Modern UI**: Sleek popup with live stats, sync status, and storage management.
+
+---
+
+## 🎬 Quick Start Guide
+
+### Prerequisites
+
+1. **Google Account** with access to Google Sheets.
+2. **Google Cloud Project** with OAuth2 configured (see [Configuration](#configuration)).
+3. **Chrome Browser** (or Chromium-based browser).
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/MozartofCode/Job-Application-Tracker.git
+   cd Job-Application-Tracker
+   ```
+
+2. **Setup Configuration Files**
+   This project uses local configuration files that are ignored by git for security.
+   
+   **Create `manifest.json`:**
+   ```bash
+   cp example.manifest.json manifest.json
+   ```
+   
+   **Create `config.js`:**
+   ```bash
+   cp example.config.js config.js
+   ```
+
+3. **Configure Settings** (See [Configuration Section](#-configuration) for details)
+   - Add your Google Cloud OAuth2 Client ID to `manifest.json`.
+   - Add your Google Spreadsheet ID to `config.js` and `popup/popup.js`.
+
+4. **Load the Extension**
+   - Open Chrome and navigate to `chrome://extensions/`.
+   - Enable **Developer mode** (toggle in top right).
+   - Click **Load unpacked**.
+   - Select the `Job-Application-Tracker` folder.
+
+5. **Authenticate**
+   - Click the JobFlow extension icon.
+   - Click **Connect Google Account**.
+   - Grant permissions.
+
+---
+
+## ⚙️ Configuration
+
+### 1. Google Cloud Setup (OAuth2)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com).
+2. Create a **New Project** (e.g., "JobFlow Extension").
+3. Navigate to **APIs & Services** → **Library** and enable **Google Sheets API**.
+4. Go to **OAuth consent screen**:
+   - Select **External**.
+   - Fill in required contact info.
+   - Add Scope: `https://www.googleapis.com/auth/spreadsheets`.
+   - Add your email to **Test users**.
+5. Go to **Credentials** → **Create Credentials** → **OAuth client ID**:
+   - Application type: **Chrome extension**.
+   - **Item ID**: Copy the ID from `chrome://extensions/` for JobFlow.
+6. Copy the generated **Client ID**.
+
+7. **Update `manifest.json`**:
+   Replace `YOUR_CLIENT_ID_HERE` with your Client ID.
+   ```json
+   "oauth2": {
+     "client_id": "YOUR_ACTUAL_CLIENT_ID.apps.googleusercontent.com",
+     ...
+   }
+   ```
+
+### 2. Google Sheet Setup
+
+1. Create a new [Google Sheet](https://sheets.google.com).
+2. **Add Headers** in Row 1 (Order is important!):
+   
+   | Col | Header | Description |
+   |-----|--------|-------------|
+   | A | **Job Title** | Position title |
+   | B | **Company** | Company name |
+   | C | **Location** | Job location |
+   | D | **URL** | Link to posting |
+   | E | **Salary** | Salary info (if found) |
+
+3. Copy the **Spreadsheet ID** from the URL:
+   `https://docs.google.com/spreadsheets/d/`**`1pZ...your_id_here...WAR`**`/edit`
+
+4. **Update Files**:
+   
+   In `config.js`:
+   ```javascript
+   export const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
+   ```
+
+   In `popup/popup.js` (line 7):
+   ```javascript
+   const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
+   ```
+
+---
+
+## 🎨 How It Works
+
+### LinkedIn Integration
+Navigate to any **LinkedIn Job Detail Page** (e.g., `/jobs/view/...`). JobFlow injects a "Capture Job" button directly into the page.
+
+> **Note**: The button appears on specific job pages, not the general search results list. Click on a job to view details and see the button.
+
+### Career Sites
+On valid career pages, a purple **floating action button** appears in the bottom-right corner.
+
+### Data Flow
+1. **Click Button**: Job details are scraped.
+2. **Queueing**: Job is saved to local storage (works offline).
+3. **Sync**: Extension syncs queue to Google Sheets immediately or via background alarm.
+4. **Status**: "Saved" status prevents duplicates.
+
+---
+
+## 🐛 Troubleshooting
+
+### "Capture Job" Button Not Appearing?
+1. **Check Page Type**: Ensure you are on a specific job view page (e.g., `.../jobs/view/123`), NOT the search results listing.
+2. **Reload Extension**: If you changed any code or configuration, safeguard by reloading the extension in `chrome://extensions/` and refreshing the web page.
+3. **Console Logs**: Press `F12` -> Console. Look for `🔵 JobFlow LinkedIn scraper loaded`.
+
+### Jobs Not Saving?
+- Check if your **Spreadsheet ID** is correct in both `config.js` and `popup.js`.
+- Ensure your Google Sheet is named "Sheet1" (default).
+- Verify you are authenticated (Green "Connected" status in popup).
+
+### Security Note
+- `manifest.json` and `config.js` contain your private configuration.
+- These files are added to `.gitignore` to prevent accidental commits.
+- Always use `example.manifest.json` and `example.config.js` for templates.
+
+---
+
+## 📁 Project Structure
+
+```
+Job-Application-Tracker/
+├── manifest.json           # Extension config (GitIgnored)
+├── config.js               # Spreadsheet ID (GitIgnored)
+├── background.js           # Service worker (OAuth, Sync)
+├── content/                # Scrapers for websites
+│   ├── linkedin.js
+│   ├── universal.js
+│   └── styles.css
+├── popup/                  # Extension popup UI
+├── assets/                 # Icons and images
+└── README.md               # Documentation
+```
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository.
+2. Create your feature branch.
+3. Commit your changes.
+4. Push to the branch.
+5. Open a Pull Request.
+
+---
+
+<div align="center">
+  Made with 💜 by <a href="https://github.com/MozartofCode">MozartofCode</a>
+</div>
+
+<div align="center">
+  <img src="assets/logo.png" alt="JobFlow Logo" width="200"/>
+  
+  **Save job postings from LinkedIn and career sites directly to Google Sheets with one click!**
+  
+  [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-blue?logo=google-chrome)](https://github.com/MozartofCode/Job-Application-Tracker)
+  [![Manifest V3](https://img.shields.io/badge/Manifest-V3-green)](https://developer.chrome.com/docs/extensions/mv3/)
+  [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+</div>
+
+---
+
+## ✨ Features
+
 - **🎯 One-Click Capture**: Beautiful "Capture Job" button appears on job postings
 - **📊 Auto-Save to Google Sheets**: Jobs automatically sync to your spreadsheet
 - **💾 Smart Tracking**: Once saved, jobs stay marked as "Saved" - no duplicate entries!
